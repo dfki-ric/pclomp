@@ -230,6 +230,17 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::estimateRigi
     result = bfgs.testGradient(gradient_tol);
 #else
     result = bfgs.testGradient();
+    // BFGSDummyFunctor::checkGradient() returns NotStarted when not overridden
+    // (pclomp's OptimizationFunctorWithIndices does not implement it, unlike
+    // PCL's own GICP). NotStarted != Running causes the do-while to exit after
+    // exactly one inner step; the post-loop check then fails and throws
+    // SolverDidntConvergeException even when BFGS made a valid step. Treat
+    // NotStarted as Running so the inner loop runs until max_inner_iterations_
+    // or until NoProgress/line-search failure — both of which are non-throwing
+    // exit paths.
+    if (result == BFGSSpace::NotStarted) {
+      result = BFGSSpace::Running;
+    }
 #endif
   } while(result == BFGSSpace::Running && inner_iterations_ < max_inner_iterations_);
   if(result == BFGSSpace::NoProgress || result == BFGSSpace::Success || inner_iterations_ == max_inner_iterations_)
@@ -373,7 +384,18 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::Optimization
 template <typename PointSource, typename PointTarget> inline void
 pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeTransformation (PointCloudSource &output, const Eigen::Matrix4f& guess)
 {
-  pcl::IterativeClosestPoint<PointSource, PointTarget>::initComputeReciprocal ();
+  // GICP needs a KdTree over the SOURCE cloud to compute per-point covariance
+  // matrices. pclomp inherits use_reciprocal_correspondence_=false from
+  // pcl::IterativeClosestPoint, so the parent initComputeReciprocal() is a
+  // no-op and tree_reciprocal_ is left with no input cloud (PCL 1.14 default-
+  // constructs it as an empty, non-null KdTree). A nearestKSearch on that empty
+  // tree returns 0 results -> source covariances degenerate -> Mahalanobis
+  // metrics are wrong -> BFGS fails with SolverDidntConvergeException ->
+  // hasConverged()=false, returns identity. Fix: populate it here explicitly.
+  if (!tree_reciprocal_) {
+    tree_reciprocal_.reset(new pcl::search::KdTree<PointSource>(false));
+  }
+  tree_reciprocal_->setInputCloud(input_);
   using namespace std;
   // Difference between consecutive transforms
   double delta = 0;
