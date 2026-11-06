@@ -454,6 +454,152 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::Optimization
   gicp_->computeRDerivative(x, R, g);
 }
 
+template <typename PointSource, typename PointTarget>
+inline void
+pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::
+    OptimizationFunctorWithIndices::dfddf(const Vector6d& x,
+                                          Vector6d& gradient,
+                                          Matrix6d& hessian)
+{
+  Eigen::Matrix4f transformation_matrix = gicp_->base_transformation_;
+  gicp_->applyState(transformation_matrix, x);
+  const Eigen::Matrix4f transformation_matrix_float =
+      transformation_matrix.template cast<float>();
+  const Eigen::Matrix4f base_transformation_float =
+      gicp_->base_transformation_.template cast<float>();
+  // Zero out gradient and hessian
+  gradient.setZero();
+  hessian.setZero();
+  // Helper matrices
+  Eigen::Matrix3d dR_dPhi;
+  Eigen::Matrix3d dR_dTheta;
+  Eigen::Matrix3d dR_dPsi;
+  gicp_->getRDerivatives(x[3], x[4], x[5], dR_dPhi, dR_dTheta, dR_dPsi);
+  Eigen::Matrix3d ddR_dPhi_dPhi;
+  Eigen::Matrix3d ddR_dPhi_dTheta;
+  Eigen::Matrix3d ddR_dPhi_dPsi;
+  Eigen::Matrix3d ddR_dTheta_dTheta;
+  Eigen::Matrix3d ddR_dTheta_dPsi;
+  Eigen::Matrix3d ddR_dPsi_dPsi;
+  gicp_->getR2ndDerivatives(x[3],
+                            x[4],
+                            x[5],
+                            ddR_dPhi_dPhi,
+                            ddR_dPhi_dTheta,
+                            ddR_dPhi_dPsi,
+                            ddR_dTheta_dTheta,
+                            ddR_dTheta_dPsi,
+                            ddR_dPsi_dPsi);
+  Eigen::Matrix3d dCost_dR_T = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T1 = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T2 = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T3 = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T1b = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T2b = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d dCost_dR_T3b = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d hessian_rot_phi = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d hessian_rot_theta = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d hessian_rot_psi = Eigen::Matrix3d::Zero();
+  Eigen::Matrix<double, 9, 6> hessian_rot_tmp = Eigen::Matrix<double, 9, 6>::Zero();
+
+  int m = static_cast<int>(gicp_->tmp_idx_src_->size());
+  for (int i = 0; i < m; ++i) {
+    // The last coordinate, p_src[3] is guaranteed to be set to 1.0 in registration.hpp
+    const auto& src_idx = (*gicp_->tmp_idx_src_)[i];
+    pcl::Vector4fMapConst p_src = (*gicp_->tmp_src_)[src_idx].getVector4fMap();
+    // The last coordinate, p_tgt[3] is guaranteed to be set to 1.0 in registration.hpp
+    pcl::Vector4fMapConst p_tgt =
+        (*gicp_->tmp_tgt_)[(*gicp_->tmp_idx_tgt_)[i]].getVector4fMap();
+    Eigen::Vector4f p_trans_src(transformation_matrix_float * p_src);
+    // The last coordinate is still guaranteed to be set to 1.0
+    // The d here is the negative of the d in the paper
+    const Eigen::Vector3d d(p_trans_src[0] - p_tgt[0],
+                            p_trans_src[1] - p_tgt[1],
+                            p_trans_src[2] - p_tgt[2]);
+    Eigen::Matrix3d M = gicp_->mahalanobis(src_idx).template block<3, 3>(0, 0).template cast<double>();
+    const Eigen::Vector3d Md(M * d); // Md = M*d
+    gradient.head<3>() += Md;        // translation gradient
+    hessian.block<3, 3>(0, 0) += M;  // translation-translation hessian
+    p_trans_src = base_transformation_float * p_src;
+    const Eigen::Vector3d p_base_src(p_trans_src[0], p_trans_src[1], p_trans_src[2]);
+    dCost_dR_T.noalias() += p_base_src * Md.transpose();
+    dCost_dR_T1b += p_base_src[0] * M;
+    dCost_dR_T2b += p_base_src[1] * M;
+    dCost_dR_T3b += p_base_src[2] * M;
+    hessian_rot_tmp.noalias() +=
+        Eigen::Map<const Eigen::Matrix<double, 9, 1>>{M.data()} *
+        (Eigen::Matrix<double, 1, 6>() << p_base_src[0] * p_base_src[0],
+         p_base_src[0] * p_base_src[1],
+         p_base_src[0] * p_base_src[2],
+         p_base_src[1] * p_base_src[1],
+         p_base_src[1] * p_base_src[2],
+         p_base_src[2] * p_base_src[2])
+            .finished();
+  }
+  gradient.head<3>() *= 2.0 / m; // translation gradient
+  dCost_dR_T *= 2.0 / m;
+  gicp_->computeRDerivative(x, dCost_dR_T, gradient); // rotation gradient
+  hessian.block<3, 3>(0, 0) *= 2.0 / m;               // translation-translation hessian
+  // translation-rotation hessian
+  dCost_dR_T1.row(0) = dCost_dR_T1b.col(0);
+  dCost_dR_T1.row(1) = dCost_dR_T2b.col(0);
+  dCost_dR_T1.row(2) = dCost_dR_T3b.col(0);
+  dCost_dR_T2.row(0) = dCost_dR_T1b.col(1);
+  dCost_dR_T2.row(1) = dCost_dR_T2b.col(1);
+  dCost_dR_T2.row(2) = dCost_dR_T3b.col(1);
+  dCost_dR_T3.row(0) = dCost_dR_T1b.col(2);
+  dCost_dR_T3.row(1) = dCost_dR_T2b.col(2);
+  dCost_dR_T3.row(2) = dCost_dR_T3b.col(2);
+  dCost_dR_T1 *= 2.0 / m;
+  dCost_dR_T2 *= 2.0 / m;
+  dCost_dR_T3 *= 2.0 / m;
+  hessian(3, 0) = (dR_dPhi * dCost_dR_T1).trace();
+  hessian(4, 0) = (dR_dTheta * dCost_dR_T1).trace();
+  hessian(5, 0) = (dR_dPsi * dCost_dR_T1).trace();
+  hessian(3, 1) = (dR_dPhi * dCost_dR_T2).trace();
+  hessian(4, 1) = (dR_dTheta * dCost_dR_T2).trace();
+  hessian(5, 1) = (dR_dPsi * dCost_dR_T2).trace();
+  hessian(3, 2) = (dR_dPhi * dCost_dR_T3).trace();
+  hessian(4, 2) = (dR_dTheta * dCost_dR_T3).trace();
+  hessian(5, 2) = (dR_dPsi * dCost_dR_T3).trace();
+  hessian.block<3, 3>(0, 3) = hessian.block<3, 3>(3, 0).transpose();
+  // rotation-rotation hessian
+  int lookup[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};
+  for (int l = 0; l < 3; ++l) {
+    for (int i = 0; i < 3; ++i) {
+      double phi_tmp = 0.0, theta_tmp = 0.0, psi_tmp = 0.0;
+      for (int j = 0; j < 3; ++j) {
+        for (int k = 0; k < 3; ++k) {
+          phi_tmp += hessian_rot_tmp(3 * j + i, lookup[l][k]) * dR_dPhi(j, k);
+          theta_tmp += hessian_rot_tmp(3 * j + i, lookup[l][k]) * dR_dTheta(j, k);
+          psi_tmp += hessian_rot_tmp(3 * j + i, lookup[l][k]) * dR_dPsi(j, k);
+        }
+      }
+      hessian_rot_phi(i, l) = phi_tmp;
+      hessian_rot_theta(i, l) = theta_tmp;
+      hessian_rot_psi(i, l) = psi_tmp;
+    }
+  }
+  hessian_rot_phi *= 2.0 / m;
+  hessian_rot_theta *= 2.0 / m;
+  hessian_rot_psi *= 2.0 / m;
+  hessian(3, 3) = (dR_dPhi.transpose() * hessian_rot_phi).trace() +
+                  (ddR_dPhi_dPhi * dCost_dR_T).trace();
+  hessian(3, 4) = (dR_dPhi.transpose() * hessian_rot_theta).trace() +
+                  (ddR_dPhi_dTheta * dCost_dR_T).trace();
+  hessian(3, 5) = (dR_dPhi.transpose() * hessian_rot_psi).trace() +
+                  (ddR_dPhi_dPsi * dCost_dR_T).trace();
+  hessian(4, 4) = (dR_dTheta.transpose() * hessian_rot_theta).trace() +
+                  (ddR_dTheta_dTheta * dCost_dR_T).trace();
+  hessian(4, 5) = (dR_dTheta.transpose() * hessian_rot_psi).trace() +
+                  (ddR_dTheta_dPsi * dCost_dR_T).trace();
+  hessian(5, 5) = (dR_dPsi.transpose() * hessian_rot_psi).trace() +
+                  (ddR_dPsi_dPsi * dCost_dR_T).trace();
+  hessian(4, 3) = hessian(3, 4);
+  hessian(5, 3) = hessian(3, 5);
+  hessian(5, 4) = hessian(4, 5);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline void
 pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeTransformation (PointCloudSource &output, const Eigen::Matrix4f& guess)

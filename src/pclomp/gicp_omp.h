@@ -111,6 +111,7 @@ namespace pclomp
 
 
       using Vector6d = Eigen::Matrix<double, 6, 1>;
+      using Matrix6d = Eigen::Matrix<double, 6, 6>;
 
       /** \brief Empty constructor. */
       GeneralizedIterativeClosestPoint ()
@@ -406,6 +407,7 @@ namespace pclomp
         double operator() (const Vector6d& x) override;
         void  df(const Vector6d &x, Vector6d &df) override;
         void fdf(const Vector6d &x, double &f, Vector6d &df) override;
+        void dfddf(const Vector6d& x, Vector6d& df, Matrix6d& ddf);
 
         const GeneralizedIterativeClosestPoint *gicp_;
       };
