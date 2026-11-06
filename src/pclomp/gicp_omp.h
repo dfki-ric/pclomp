@@ -415,6 +415,15 @@ namespace pclomp
                            const pcl::PointCloud<PointTarget> &cloud_tgt,
                            const std::vector<int> &tgt_indices,
                            Eigen::Matrix4f &transformation_matrix)> rigid_transformation_estimation_;
+
+    private:
+      void
+      getRDerivatives(double phi,
+                      double theta,
+                      double psi,
+                      Eigen::Matrix3d& dR_dPhi,
+                      Eigen::Matrix3d& dR_dTheta,
+                      Eigen::Matrix3d& dR_dPsi) const;
   };
 }
 

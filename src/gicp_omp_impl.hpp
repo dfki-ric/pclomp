@@ -120,6 +120,56 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeCovar
   }
 }
 
+template <typename PointSource, typename PointTarget>
+void
+pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::getRDerivatives(
+    double phi,
+    double theta,
+    double psi,
+    Eigen::Matrix3d& dR_dPhi,
+    Eigen::Matrix3d& dR_dTheta,
+    Eigen::Matrix3d& dR_dPsi) const
+{
+  const double cphi = std::cos(phi), sphi = std::sin(phi);
+  const double ctheta = std::cos(theta), stheta = std::sin(theta);
+  const double cpsi = std::cos(psi), spsi = std::sin(psi);
+  dR_dPhi(0, 0) = 0.;
+  dR_dPhi(1, 0) = 0.;
+  dR_dPhi(2, 0) = 0.;
+
+  dR_dPhi(0, 1) = sphi * spsi + cphi * cpsi * stheta;
+  dR_dPhi(1, 1) = -cpsi * sphi + cphi * spsi * stheta;
+  dR_dPhi(2, 1) = cphi * ctheta;
+
+  dR_dPhi(0, 2) = cphi * spsi - cpsi * sphi * stheta;
+  dR_dPhi(1, 2) = -cphi * cpsi - sphi * spsi * stheta;
+  dR_dPhi(2, 2) = -ctheta * sphi;
+
+  dR_dTheta(0, 0) = -cpsi * stheta;
+  dR_dTheta(1, 0) = -spsi * stheta;
+  dR_dTheta(2, 0) = -ctheta;
+
+  dR_dTheta(0, 1) = cpsi * ctheta * sphi;
+  dR_dTheta(1, 1) = ctheta * sphi * spsi;
+  dR_dTheta(2, 1) = -sphi * stheta;
+
+  dR_dTheta(0, 2) = cphi * cpsi * ctheta;
+  dR_dTheta(1, 2) = cphi * ctheta * spsi;
+  dR_dTheta(2, 2) = -cphi * stheta;
+
+  dR_dPsi(0, 0) = -ctheta * spsi;
+  dR_dPsi(1, 0) = cpsi * ctheta;
+  dR_dPsi(2, 0) = 0.;
+
+  dR_dPsi(0, 1) = -cphi * cpsi - sphi * spsi * stheta;
+  dR_dPsi(1, 1) = -cphi * spsi + cpsi * sphi * stheta;
+  dR_dPsi(2, 1) = 0.;
+
+  dR_dPsi(0, 2) = cpsi * sphi - cphi * spsi * stheta;
+  dR_dPsi(1, 2) = sphi * spsi + cphi * cpsi * stheta;
+  dR_dPsi(2, 2) = 0.;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> void
 pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeRDerivative(const Vector6d &x, const Eigen::Matrix3d &R, Vector6d& g) const
@@ -127,48 +177,7 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeRDeri
   Eigen::Matrix3d dR_dPhi;
   Eigen::Matrix3d dR_dTheta;
   Eigen::Matrix3d dR_dPsi;
-
-  double phi = x[3], theta = x[4], psi = x[5];
-
-  double cphi = std::cos(phi), sphi = sin(phi);
-  double ctheta = std::cos(theta), stheta = sin(theta);
-  double cpsi = std::cos(psi), spsi = sin(psi);
-
-  dR_dPhi(0,0) = 0.;
-  dR_dPhi(1,0) = 0.;
-  dR_dPhi(2,0) = 0.;
-
-  dR_dPhi(0,1) = sphi*spsi + cphi*cpsi*stheta;
-  dR_dPhi(1,1) = -cpsi*sphi + cphi*spsi*stheta;
-  dR_dPhi(2,1) = cphi*ctheta;
-
-  dR_dPhi(0,2) = cphi*spsi - cpsi*sphi*stheta;
-  dR_dPhi(1,2) = -cphi*cpsi - sphi*spsi*stheta;
-  dR_dPhi(2,2) = -ctheta*sphi;
-
-  dR_dTheta(0,0) = -cpsi*stheta;
-  dR_dTheta(1,0) = -spsi*stheta;
-  dR_dTheta(2,0) = -ctheta;
-
-  dR_dTheta(0,1) = cpsi*ctheta*sphi;
-  dR_dTheta(1,1) = ctheta*sphi*spsi;
-  dR_dTheta(2,1) = -sphi*stheta;
-
-  dR_dTheta(0,2) = cphi*cpsi*ctheta;
-  dR_dTheta(1,2) = cphi*ctheta*spsi;
-  dR_dTheta(2,2) = -cphi*stheta;
-
-  dR_dPsi(0,0) = -ctheta*spsi;
-  dR_dPsi(1,0) = cpsi*ctheta;
-  dR_dPsi(2,0) = 0.;
-
-  dR_dPsi(0,1) = -cphi*cpsi - sphi*spsi*stheta;
-  dR_dPsi(1,1) = -cphi*spsi + cpsi*sphi*stheta;
-  dR_dPsi(2,1) = 0.;
-
-  dR_dPsi(0,2) = cpsi*sphi - cphi*spsi*stheta;
-  dR_dPsi(1,2) = sphi*spsi + cphi*cpsi*stheta;
-  dR_dPsi(2,2) = 0.;
+  getRDerivatives(x[3], x[4], x[5], dR_dPhi, dR_dTheta, dR_dPsi);
 
   g[3] = matricesInnerProd(dR_dPhi, R);
   g[4] = matricesInnerProd(dR_dTheta, R);
