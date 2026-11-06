@@ -259,6 +259,41 @@ namespace pclomp
       int
       getMaximumOptimizerIterations () { return (max_inner_iterations_); }
 
+      /** \brief Set the minimal translation gradient threshold for early optimization stop
+       * \param[in] tolerance translation gradient threshold in meters
+       */
+      void
+      setTranslationGradientTolerance(double tolerance)
+      {
+        translation_gradient_tolerance_ = tolerance;
+      }
+
+      /** \brief Return the minimal translation gradient threshold for early optimization
+       * stop
+       */
+      double
+      getTranslationGradientTolerance() const
+      {
+        return translation_gradient_tolerance_;
+      }
+
+      /** \brief Set the minimal rotation gradient threshold for early optimization stop
+       * \param[in] tolerance rotation gradient threshold in radians
+       */
+      void
+      setRotationGradientTolerance(double tolerance)
+      {
+        rotation_gradient_tolerance_ = tolerance;
+      }
+
+      /** \brief Return the minimal rotation gradient threshold for early optimization stop
+       */
+      double
+      getRotationGradientTolerance() const
+      {
+        return rotation_gradient_tolerance_;
+      }
+
     protected:
 
       /** \brief The number of neighbors used for covariances computation.
@@ -305,6 +340,12 @@ namespace pclomp
 
       /** \brief maximum number of optimizations */
       int max_inner_iterations_;
+
+      /** \brief minimal translation gradient for early optimization stop */
+      double translation_gradient_tolerance_{1e-2};
+
+      /** \brief minimal rotation gradient for early optimization stop */
+      double rotation_gradient_tolerance_{1e-2};
 
       /** \brief compute points covariances matrices according to the K nearest
         * neighbors. K is set via setCorrespondenceRandomness() method.
