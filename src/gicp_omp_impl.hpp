@@ -184,6 +184,82 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeRDeri
   g[5] = matricesInnerProd(dR_dPsi, R);
 }
 
+template <typename PointSource, typename PointTarget>
+void
+pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::getR2ndDerivatives(
+    double phi,
+    double theta,
+    double psi,
+    Eigen::Matrix3d& ddR_dPhi_dPhi,
+    Eigen::Matrix3d& ddR_dPhi_dTheta,
+    Eigen::Matrix3d& ddR_dPhi_dPsi,
+    Eigen::Matrix3d& ddR_dTheta_dTheta,
+    Eigen::Matrix3d& ddR_dTheta_dPsi,
+    Eigen::Matrix3d& ddR_dPsi_dPsi) const
+{
+  const double sphi = std::sin(phi), stheta = std::sin(theta), spsi = std::sin(psi);
+  const double cphi = std::cos(phi), ctheta = std::cos(theta), cpsi = std::cos(psi);
+  ddR_dPhi_dPhi(0, 0) = 0.0;
+  ddR_dPhi_dPhi(1, 0) = 0.0;
+  ddR_dPhi_dPhi(2, 0) = 0.0;
+  ddR_dPhi_dPhi(0, 1) = -cpsi * stheta * sphi + spsi * cphi;
+  ddR_dPhi_dPhi(1, 1) = -cpsi * cphi - spsi * stheta * sphi;
+  ddR_dPhi_dPhi(2, 1) = -ctheta * sphi;
+  ddR_dPhi_dPhi(0, 2) = -spsi * sphi - cpsi * stheta * cphi;
+  ddR_dPhi_dPhi(1, 2) = -spsi * stheta * cphi + cpsi * sphi;
+  ddR_dPhi_dPhi(2, 2) = -ctheta * cphi;
+
+  ddR_dPhi_dTheta(0, 0) = 0.0;
+  ddR_dPhi_dTheta(1, 0) = 0.0;
+  ddR_dPhi_dTheta(2, 0) = 0.0;
+  ddR_dPhi_dTheta(0, 1) = cpsi * ctheta * cphi;
+  ddR_dPhi_dTheta(1, 1) = spsi * ctheta * cphi;
+  ddR_dPhi_dTheta(2, 1) = -stheta * cphi;
+  ddR_dPhi_dTheta(0, 2) = -cpsi * ctheta * sphi;
+  ddR_dPhi_dTheta(1, 2) = -spsi * ctheta * sphi;
+  ddR_dPhi_dTheta(2, 2) = stheta * sphi;
+
+  ddR_dPhi_dPsi(0, 0) = 0.0;
+  ddR_dPhi_dPsi(1, 0) = 0.0;
+  ddR_dPhi_dPsi(2, 0) = 0.0;
+  ddR_dPhi_dPsi(0, 1) = -spsi * stheta * cphi + cpsi * sphi;
+  ddR_dPhi_dPsi(1, 1) = spsi * sphi + cpsi * stheta * cphi;
+  ddR_dPhi_dPsi(2, 1) = 0.0;
+  ddR_dPhi_dPsi(0, 2) = cpsi * cphi + spsi * stheta * sphi;
+  ddR_dPhi_dPsi(1, 2) = -cpsi * stheta * sphi + spsi * cphi;
+  ddR_dPhi_dPsi(2, 2) = 0.0;
+
+  ddR_dTheta_dTheta(0, 0) = -cpsi * ctheta;
+  ddR_dTheta_dTheta(1, 0) = -spsi * ctheta;
+  ddR_dTheta_dTheta(2, 0) = stheta;
+  ddR_dTheta_dTheta(0, 1) = -cpsi * stheta * sphi;
+  ddR_dTheta_dTheta(1, 1) = -spsi * stheta * sphi;
+  ddR_dTheta_dTheta(2, 1) = -ctheta * sphi;
+  ddR_dTheta_dTheta(0, 2) = -cpsi * stheta * cphi;
+  ddR_dTheta_dTheta(1, 2) = -spsi * stheta * cphi;
+  ddR_dTheta_dTheta(2, 2) = -ctheta * cphi;
+
+  ddR_dTheta_dPsi(0, 0) = spsi * stheta;
+  ddR_dTheta_dPsi(1, 0) = -cpsi * stheta;
+  ddR_dTheta_dPsi(2, 0) = 0.0;
+  ddR_dTheta_dPsi(0, 1) = -spsi * ctheta * sphi;
+  ddR_dTheta_dPsi(1, 1) = cpsi * ctheta * sphi;
+  ddR_dTheta_dPsi(2, 1) = 0.0;
+  ddR_dTheta_dPsi(0, 2) = -spsi * ctheta * cphi;
+  ddR_dTheta_dPsi(1, 2) = cpsi * ctheta * cphi;
+  ddR_dTheta_dPsi(2, 2) = 0.0;
+
+  ddR_dPsi_dPsi(0, 0) = -cpsi * ctheta;
+  ddR_dPsi_dPsi(1, 0) = -spsi * ctheta;
+  ddR_dPsi_dPsi(2, 0) = 0.0;
+  ddR_dPsi_dPsi(0, 1) = -cpsi * stheta * sphi + spsi * cphi;
+  ddR_dPsi_dPsi(1, 1) = -cpsi * cphi - spsi * stheta * sphi;
+  ddR_dPsi_dPsi(2, 1) = 0.0;
+  ddR_dPsi_dPsi(0, 2) = -spsi * sphi - cpsi * stheta * cphi;
+  ddR_dPsi_dPsi(1, 2) = -spsi * stheta * cphi + cpsi * sphi;
+  ddR_dPsi_dPsi(2, 2) = 0.0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> void
 pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::estimateRigidTransformationBFGS (const PointCloudSource &cloud_src,

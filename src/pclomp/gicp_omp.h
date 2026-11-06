@@ -424,6 +424,17 @@ namespace pclomp
                       Eigen::Matrix3d& dR_dPhi,
                       Eigen::Matrix3d& dR_dTheta,
                       Eigen::Matrix3d& dR_dPsi) const;
+
+      void
+      getR2ndDerivatives(double phi,
+                         double theta,
+                         double psi,
+                         Eigen::Matrix3d& ddR_dPhi_dPhi,
+                         Eigen::Matrix3d& ddR_dPhi_dTheta,
+                         Eigen::Matrix3d& ddR_dPhi_dPsi,
+                         Eigen::Matrix3d& ddR_dTheta_dTheta,
+                         Eigen::Matrix3d& ddR_dTheta_dPsi,
+                         Eigen::Matrix3d& ddR_dPsi_dPsi) const;
   };
 }
 
