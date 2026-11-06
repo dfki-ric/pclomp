@@ -78,21 +78,24 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeCovar
     kdtree->nearestKSearch(query_point, k_correspondences_, nn_indices, nn_dist_sq);
 
     // Find the covariance matrix
-    for(int j = 0; j < k_correspondences_; j++) {
-      const PointT &pt = (*cloud)[nn_indices[j]];
+    for (int j = 0; j < k_correspondences_; j++) {
+      // de-mean neighbourhood to avoid inaccuracies when far away from origin
+      const double ptx = (*cloud)[nn_indices[j]].x - query_point.x,
+                   pty = (*cloud)[nn_indices[j]].y - query_point.y,
+                   ptz = (*cloud)[nn_indices[j]].z - query_point.z;
 
-      mean[0] += pt.x;
-      mean[1] += pt.y;
-      mean[2] += pt.z;
+      mean[0] += ptx;
+      mean[1] += pty;
+      mean[2] += ptz;
 
-      cov(0,0) += pt.x*pt.x;
+      cov(0, 0) += ptx * ptx;
 
-      cov(1,0) += pt.y*pt.x;
-      cov(1,1) += pt.y*pt.y;
+      cov(1, 0) += pty * ptx;
+      cov(1, 1) += pty * pty;
 
-      cov(2,0) += pt.z*pt.x;
-      cov(2,1) += pt.z*pt.y;
-      cov(2,2) += pt.z*pt.z;
+      cov(2, 0) += ptz * ptx;
+      cov(2, 1) += ptz * pty;
+      cov(2, 2) += ptz * ptz;
     }
 
     mean /= static_cast<double> (k_correspondences_);
