@@ -117,7 +117,7 @@ pclomp::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   if (rgba_index >= 0)
   {
     rgba_index = fields[rgba_index].offset;
-    centroid_size += 3;
+    centroid_size += 4;
   }
 
   // If we don't want to process the entire cloud, but rather filter points far away from the viewpoint first...
