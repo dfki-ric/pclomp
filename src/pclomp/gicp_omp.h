@@ -132,7 +132,8 @@ namespace pclomp
                                                    const std::vector<int>& indices_tgt,
                                                    Eigen::Matrix4f& transformation_matrix)
         {
-          estimateRigidTransformationBFGS (cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
+          estimateRigidTransformationNewton(
+              cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
         };
       }
 
@@ -204,6 +205,23 @@ namespace pclomp
                                        const std::vector<int> &indices_tgt,
                                        Eigen::Matrix4f &transformation_matrix);
 
+      /** \brief Estimate a rigid rotation transformation between a source and a target
+       * point cloud using an iterative non-linear Newton approach.
+       * \param[in] cloud_src the source point cloud dataset
+       * \param[in] indices_src the vector of indices describing
+       * the points of interest in \a cloud_src
+       * \param[in] cloud_tgt the target point cloud dataset
+       * \param[in] indices_tgt the vector of indices describing
+       * the correspondences of the interest points from \a indices_src
+       * \param[in,out] transformation_matrix the resultant transformation matrix
+       */
+      void
+      estimateRigidTransformationNewton(const PointCloudSource& cloud_src,
+                                        const pcl::Indices& indices_src,
+                                        const PointCloudTarget& cloud_tgt,
+                                        const pcl::Indices& indices_tgt,
+                                        Eigen::Matrix4f& transformation_matrix);
+
       /** \brief \return Mahalanobis distance matrix for the given point index */
       inline const Eigen::Matrix4f& mahalanobis(size_t index) const
       {
@@ -249,6 +267,21 @@ namespace pclomp
         */
       int
       getCorrespondenceRandomness () { return (k_correspondences_); }
+
+      /** \brief Use BFGS optimizer instead of default Newton optimizer
+       */
+      void
+      useBFGS()
+      {
+        rigid_transformation_estimation_ = [this](const PointCloudSource& cloud_src,
+                                                  const pcl::Indices& indices_src,
+                                                  const PointCloudTarget& cloud_tgt,
+                                                  const pcl::Indices& indices_tgt,
+                                                  Eigen::Matrix4f& transformation_matrix) {
+          estimateRigidTransformationBFGS(
+              cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
+        };
+      }
 
       /** set maximum number of iterations at the optimization step
         * \param[in] max maximum number of iterations for the optimizer
