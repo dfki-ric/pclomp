@@ -710,6 +710,29 @@ pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::
   hessian(5, 4) = hessian(4, 5);
 }
 
+template <typename PointSource, typename PointTarget>
+inline BFGSSpace::Status
+pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::
+    OptimizationFunctorWithIndices::checkGradient(const Vector6d& g)
+{
+  auto translation_epsilon = gicp_->translation_gradient_tolerance_;
+  auto rotation_epsilon = gicp_->rotation_gradient_tolerance_;
+
+  if ((translation_epsilon < 0.) || (rotation_epsilon < 0.))
+    return BFGSSpace::NegativeGradientEpsilon;
+
+  // express translation gradient as norm of translation parameters
+  auto translation_grad = g.head<3>().norm();
+
+  // express rotation gradient as a norm of rotation parameters
+  auto rotation_grad = g.tail<3>().norm();
+
+  if ((translation_grad < translation_epsilon) && (rotation_grad < rotation_epsilon))
+    return BFGSSpace::Success;
+
+  return BFGSSpace::Running;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 template <typename PointSource, typename PointTarget> inline void
 pclomp::GeneralizedIterativeClosestPoint<PointSource, PointTarget>::computeTransformation (PointCloudSource &output, const Eigen::Matrix4f& guess)

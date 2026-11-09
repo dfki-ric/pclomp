@@ -441,6 +441,8 @@ namespace pclomp
         void  df(const Vector6d &x, Vector6d &df) override;
         void fdf(const Vector6d &x, double &f, Vector6d &df) override;
         void dfddf(const Vector6d& x, Vector6d& df, Matrix6d& ddf);
+        BFGSSpace::Status
+        checkGradient(const Vector6d& g) override;
 
         const GeneralizedIterativeClosestPoint *gicp_;
       };
