@@ -48,6 +48,15 @@ Several methods for neighbor voxel search are implemented. If you select pclomp:
 <img src="data/screenshot.png" height="400pix" /><br>
 Red: target, Green: source, Blue: aligned
 
+## Unit tests
+gtest-based, laid out like PCL's own tests (`test/`):
+```
+cmake -S . -B build -DBUILD_TESTING=ON && cmake --build build && (cd build && ctest --output-on-failure)
+```
+They check the GICP and NDT analytic derivatives against finite differences, GICP's gradient
+convergence test, and that both recover a known offset on `data/251370668.pcd` (GICP with the
+Newton and BFGS optimizers, NDT with each neighbor search method).
+
 ## Related packages
 - [ndt_omp](https://github.com/koide3/ndt_omp)
 - [fast_gicp](https://github.com/SMRT-AIST/fast_gicp)

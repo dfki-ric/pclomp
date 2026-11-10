@@ -33,6 +33,12 @@ target_include_directories(registration PUBLIC
 	${PCL_INCLUDE_DIRS}
 )
 
+option(BUILD_TESTING "Build the unit tests (needs GTest)" OFF)
+if(BUILD_TESTING)
+	enable_testing()
+	add_subdirectory(test)
+endif()
+
 # Install binaries
 install(TARGETS registration EXPORT pclomp-targets
 	ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
