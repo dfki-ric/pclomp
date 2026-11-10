@@ -11,6 +11,8 @@
 
   <buildtool_depend>cmake</buildtool_depend>
 
+  <depend>libpcl-all-dev</depend>
+
   <test_depend>gtest</test_depend>
 
   <export>

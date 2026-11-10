@@ -56,6 +56,13 @@ cmake -S . -B build -DBUILD_TESTING=ON && cmake --build build && (cd build && ct
 They check the GICP and NDT analytic derivatives against finite differences, GICP's gradient
 convergence test, and that both recover a known offset on `data/251370668.pcd` (GICP with the
 Newton and BFGS optimizers, NDT with each neighbor search method).
+CI (`.github/workflows/build.yml`) builds with colcon and runs them on Ubuntu 22.04 and 24.04
+(26.04 as optional jobs) with gcc and clang, via `docker/Dockerfile`. The same image runs them
+locally on another Ubuntu release (`ROS_DISTRO` humble, jazzy or lyrical; `COMPILER` gcc or
+clang):
+```
+docker build -f docker/Dockerfile --build-arg ROS_DISTRO=humble --build-arg COMPILER=clang .
+```
 
 ## Related packages
 - [ndt_omp](https://github.com/koide3/ndt_omp)
