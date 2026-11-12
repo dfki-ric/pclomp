@@ -11,16 +11,18 @@ ARG COMPILER=gcc
 # dependencies from package.xml first, so this layer is cached across source changes
 COPY package.xml /colcon_ws/src/pclomp/package.xml
 # clang uses the newest GCC installation it finds for libstdc++, which need not be the default
-# g++'s (Ubuntu 26.04: clang pulls in GCC 16's runtime, g++ is 15), so add the matching
-# libstdc++-<version>-dev
+# g++'s (Ubuntu 26.04: the dependencies pull in GCC 16's runtime, g++ is 15), so add the matching
+# libstdc++-<version>-dev once all packages are installed
 RUN apt-get update \
   && if [ "$COMPILER" = clang ]; then \
-    apt-get install -y --no-install-recommends clang libomp-dev \
-    && gcc_version=$(clang++ -v 2>&1 | sed -n 's|^Selected GCC installation: .*/||p') \
-    && apt-get install -y --no-install-recommends "libstdc++-${gcc_version}-dev"; \
+    apt-get install -y --no-install-recommends clang libomp-dev; \
   fi \
   && rosdep update --rosdistro "$ROS_DISTRO" \
   && rosdep install --from-paths /colcon_ws/src --ignore-src -y \
+  && if [ "$COMPILER" = clang ]; then \
+    gcc_version=$(clang++ -v 2>&1 | sed -n 's|^Selected GCC installation: .*/||p') \
+    && apt-get install -y --no-install-recommends "libstdc++-${gcc_version}-dev"; \
+  fi \
   && rm -rf /var/lib/apt/lists/*
 
 COPY . /colcon_ws/src/pclomp/
