@@ -117,7 +117,7 @@ pclomp::VoxelGridCovariance<PointT>::applyFilter (PointCloud &output)
   if (rgba_index >= 0)
   {
     rgba_index = fields[rgba_index].offset;
-    centroid_size += 3;
+    centroid_size += 4;
   }
 
   // If we don't want to process the entire cloud, but rather filter points far away from the viewpoint first...
@@ -452,7 +452,7 @@ pclomp::VoxelGridCovariance<PointT>::getDisplayCloud (pcl::PointCloud<pcl::Point
 
   int pnt_per_cell = 1000;
   boost::mt19937 rng;
-  boost::normal_distribution<> nd (0.0, leaf_size_.head (3).norm ());
+  boost::normal_distribution<> nd (0.0, 1.0);
   boost::variate_generator<boost::mt19937&, boost::normal_distribution<> > var_nor (rng, nd);
 
   Eigen::LLT<Eigen::Matrix3d> llt_of_cov;

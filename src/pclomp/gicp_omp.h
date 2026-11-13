@@ -111,6 +111,7 @@ namespace pclomp
 
 
       using Vector6d = Eigen::Matrix<double, 6, 1>;
+      using Matrix6d = Eigen::Matrix<double, 6, 6>;
 
       /** \brief Empty constructor. */
       GeneralizedIterativeClosestPoint ()
@@ -131,7 +132,8 @@ namespace pclomp
                                                    const std::vector<int>& indices_tgt,
                                                    Eigen::Matrix4f& transformation_matrix)
         {
-          estimateRigidTransformationBFGS (cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
+          estimateRigidTransformationNewton(
+              cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
         };
       }
 
@@ -203,6 +205,23 @@ namespace pclomp
                                        const std::vector<int> &indices_tgt,
                                        Eigen::Matrix4f &transformation_matrix);
 
+      /** \brief Estimate a rigid rotation transformation between a source and a target
+       * point cloud using an iterative non-linear Newton approach.
+       * \param[in] cloud_src the source point cloud dataset
+       * \param[in] indices_src the vector of indices describing
+       * the points of interest in \a cloud_src
+       * \param[in] cloud_tgt the target point cloud dataset
+       * \param[in] indices_tgt the vector of indices describing
+       * the correspondences of the interest points from \a indices_src
+       * \param[in,out] transformation_matrix the resultant transformation matrix
+       */
+      void
+      estimateRigidTransformationNewton(const PointCloudSource& cloud_src,
+                                        const pcl::Indices& indices_src,
+                                        const PointCloudTarget& cloud_tgt,
+                                        const pcl::Indices& indices_tgt,
+                                        Eigen::Matrix4f& transformation_matrix);
+
       /** \brief \return Mahalanobis distance matrix for the given point index */
       inline const Eigen::Matrix4f& mahalanobis(size_t index) const
       {
@@ -249,6 +268,21 @@ namespace pclomp
       int
       getCorrespondenceRandomness () { return (k_correspondences_); }
 
+      /** \brief Use BFGS optimizer instead of default Newton optimizer
+       */
+      void
+      useBFGS()
+      {
+        rigid_transformation_estimation_ = [this](const PointCloudSource& cloud_src,
+                                                  const pcl::Indices& indices_src,
+                                                  const PointCloudTarget& cloud_tgt,
+                                                  const pcl::Indices& indices_tgt,
+                                                  Eigen::Matrix4f& transformation_matrix) {
+          estimateRigidTransformationBFGS(
+              cloud_src, indices_src, cloud_tgt, indices_tgt, transformation_matrix);
+        };
+      }
+
       /** set maximum number of iterations at the optimization step
         * \param[in] max maximum number of iterations for the optimizer
         */
@@ -258,6 +292,41 @@ namespace pclomp
       ///\return maximum number of iterations at the optimization step
       int
       getMaximumOptimizerIterations () { return (max_inner_iterations_); }
+
+      /** \brief Set the minimal translation gradient threshold for early optimization stop
+       * \param[in] tolerance translation gradient threshold in meters
+       */
+      void
+      setTranslationGradientTolerance(double tolerance)
+      {
+        translation_gradient_tolerance_ = tolerance;
+      }
+
+      /** \brief Return the minimal translation gradient threshold for early optimization
+       * stop
+       */
+      double
+      getTranslationGradientTolerance() const
+      {
+        return translation_gradient_tolerance_;
+      }
+
+      /** \brief Set the minimal rotation gradient threshold for early optimization stop
+       * \param[in] tolerance rotation gradient threshold in radians
+       */
+      void
+      setRotationGradientTolerance(double tolerance)
+      {
+        rotation_gradient_tolerance_ = tolerance;
+      }
+
+      /** \brief Return the minimal rotation gradient threshold for early optimization stop
+       */
+      double
+      getRotationGradientTolerance() const
+      {
+        return rotation_gradient_tolerance_;
+      }
 
     protected:
 
@@ -305,6 +374,12 @@ namespace pclomp
 
       /** \brief maximum number of optimizations */
       int max_inner_iterations_;
+
+      /** \brief minimal translation gradient for early optimization stop */
+      double translation_gradient_tolerance_{1e-2};
+
+      /** \brief minimal rotation gradient for early optimization stop */
+      double rotation_gradient_tolerance_{1e-2};
 
       /** \brief compute points covariances matrices according to the K nearest
         * neighbors. K is set via setCorrespondenceRandomness() method.
@@ -365,6 +440,9 @@ namespace pclomp
         double operator() (const Vector6d& x) override;
         void  df(const Vector6d &x, Vector6d &df) override;
         void fdf(const Vector6d &x, double &f, Vector6d &df) override;
+        void dfddf(const Vector6d& x, Vector6d& df, Matrix6d& ddf);
+        BFGSSpace::Status
+        checkGradient(const Vector6d& g) override;
 
         const GeneralizedIterativeClosestPoint *gicp_;
       };
@@ -374,6 +452,26 @@ namespace pclomp
                            const pcl::PointCloud<PointTarget> &cloud_tgt,
                            const std::vector<int> &tgt_indices,
                            Eigen::Matrix4f &transformation_matrix)> rigid_transformation_estimation_;
+
+    private:
+      void
+      getRDerivatives(double phi,
+                      double theta,
+                      double psi,
+                      Eigen::Matrix3d& dR_dPhi,
+                      Eigen::Matrix3d& dR_dTheta,
+                      Eigen::Matrix3d& dR_dPsi) const;
+
+      void
+      getR2ndDerivatives(double phi,
+                         double theta,
+                         double psi,
+                         Eigen::Matrix3d& ddR_dPhi_dPhi,
+                         Eigen::Matrix3d& ddR_dPhi_dTheta,
+                         Eigen::Matrix3d& ddR_dPhi_dPsi,
+                         Eigen::Matrix3d& ddR_dTheta_dTheta,
+                         Eigen::Matrix3d& ddR_dTheta_dPsi,
+                         Eigen::Matrix3d& ddR_dPsi_dPsi) const;
   };
 }
 

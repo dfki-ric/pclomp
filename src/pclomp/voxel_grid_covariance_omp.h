@@ -102,8 +102,7 @@ namespace pclomp
         Leaf () :
           nr_points (0),
           mean_ (Eigen::Vector3d::Zero ()),
-          centroid (),
-          cov_ (Eigen::Matrix3d::Identity ()),
+          cov_ (Eigen::Matrix3d::Zero ()),
           icov_ (Eigen::Matrix3d::Zero ()),
           evecs_ (Eigen::Matrix3d::Identity ()),
           evals_ (Eigen::Vector3d::Zero ())
@@ -493,11 +492,10 @@ namespace pclomp
         k_leaves.reserve (k);
         for (std::vector<int>::iterator iter = k_indices.begin (); iter != k_indices.end (); iter++)
         {
-		  auto leaf = leaves_.find(voxel_centroids_leaf_indices_[*iter]);
-		  if (leaf == leaves_.end()) {
-			  std::cerr << "error : could not find the leaf corresponding to the voxel" << std::endl;
-			  std::cin.ignore(1);
-		  }
+          auto leaf = leaves_.find(voxel_centroids_leaf_indices_[*iter]);
+          if (leaf == leaves_.end()) {
+            continue;
+          }
           k_leaves.push_back (&(leaf->second));
         }
         return k;

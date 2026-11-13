@@ -10,24 +10,23 @@ on:
 
 jobs:
   build:
+    name: ${{ matrix.ROS_DISTRO }} (${{ matrix.COMPILER }})
     runs-on: ubuntu-latest
+    # Ubuntu 26.04 is nice-to-have for now: its jobs run, but a failure does not fail the workflow
+    continue-on-error: ${{ matrix.ROS_DISTRO == 'lyrical' }}
     strategy:
+      fail-fast: false
       matrix:
-        ROS_DISTRO: [melodic, melodic_llvm, noetic, noetic_llvm, foxy, foxy_llvm, galactic, galactic_llvm]
+        # one ROS 2 distribution per Ubuntu release: humble 22.04, jazzy 24.04, lyrical 26.04
+        ROS_DISTRO: [humble, jazzy, lyrical]
+        COMPILER: [gcc, clang]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
 
-      - name: Docker login
-        continue-on-error: true
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Docker build
-        uses: docker/build-push-action@v2
-        with:
-          file: ${{github.workspace}}/docker/${{ matrix.ROS_DISTRO }}/Dockerfile
-          context: .
-          push: false
+      - name: Build and test (colcon, in docker/Dockerfile)
+        run: >
+          docker build -f docker/Dockerfile
+          --build-arg ROS_DISTRO=${{ matrix.ROS_DISTRO }}
+          --build-arg COMPILER=${{ matrix.COMPILER }}
+          .
