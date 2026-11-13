@@ -13,17 +13,13 @@ jobs:
     name: ${{ matrix.ROS_DISTRO }} (${{ matrix.COMPILER }})
     runs-on: ubuntu-latest
     # Ubuntu 26.04 is nice-to-have for now: its jobs run, but a failure does not fail the workflow
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.ROS_DISTRO == 'lyrical' }}
     strategy:
       fail-fast: false
       matrix:
-        # one ROS 2 distribution per Ubuntu release: humble 22.04, jazzy 24.04 (lyrical 26.04 below)
-        ROS_DISTRO: [humble, jazzy]
+        # one ROS 2 distribution per Ubuntu release: humble 22.04, jazzy 24.04, lyrical 26.04
+        ROS_DISTRO: [humble, jazzy, lyrical]
         COMPILER: [gcc, clang]
-        experimental: [false]
-        include:
-          - { ROS_DISTRO: lyrical, COMPILER: gcc, experimental: true }
-          - { ROS_DISTRO: lyrical, COMPILER: clang, experimental: true }
 
     steps:
       - uses: actions/checkout@v7
